@@ -11,7 +11,7 @@ function init_model()
         @eval @everywhere seed!($random_seed)
     end
     if use_verbose
-        println("Loading and distributing data ????????:")
+        println("Loading and distributing data:")
         @time data = distribute(Float32.(load_data(data_path, prefix = data_prefix)))
     else
         data = distribute(Float32.(load_data(data_path, prefix = data_prefix)))
@@ -38,7 +38,7 @@ function init_model_from_data(all_data)
         @eval @everywhere Random.seed!($random_seed)
     end
     if use_verbose
-        println("Loading and distributing data ?????????:")
+        println("Loading and distributing data:")
         @time data = distribute(all_data)
     else
         data = distribute(all_data)
