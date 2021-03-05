@@ -46,6 +46,7 @@ mutable struct local_cluster
     points_count::Int64
     l_count::Int64
     r_count::Int64
+    related_gan_lbl::Int64
 end
 
 mutable struct local_group

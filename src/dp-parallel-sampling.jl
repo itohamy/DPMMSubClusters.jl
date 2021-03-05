@@ -1,4 +1,4 @@
-"""
+#= """
     init_model()
 
 Initialize the model, loading the data from external `npy` files, specified in the params file.
@@ -23,7 +23,7 @@ function init_model()
     labels_subcluster = distribute(rand(1:2,(size(data,2))))
     group = local_group(model_hyperparams,data,labels,labels_subcluster,local_cluster[],Float32[])
     return dp_parallel_sampling(model_hyperparams,group)
-end
+end =#
 
 """
     init_model(all_data)
@@ -64,7 +64,7 @@ function init_first_clusters!(dp_model::dp_parallel_sampling, initial_cluster_co
         push!(dp_model.group.local_clusters, create_outlier_local_cluster(dp_model.group,outlier_hyper_params))
     end
     for i=1:initial_cluster_count
-        push!(dp_model.group.local_clusters, create_first_local_cluster(dp_model.group))
+        push!(dp_model.group.local_clusters, create_first_local_cluster(dp_model.group, i))
     end
     @sync update_suff_stats_posterior!(dp_model.group)
     sample_clusters!(dp_model.group,false)
@@ -204,11 +204,23 @@ julia> unique(ret_values[1])
 """
 function fit(all_data::AbstractArray{Float32,2},local_hyper_params::distribution_hyper_params,α_param::Float32;
         iters::Int64 = 100, init_clusters::Int64 = 1,seed = nothing, verbose = true, save_model = false, burnout = 20, gt = nothing, max_clusters = Inf, outlier_weight = 0, outlier_params = nothing)
-        dp_model,iter_count , nmi_score_history, liklihood_history, cluster_count_history = dp_parallel(all_data, local_hyper_params,α_param,iters,init_clusters,seed,verbose, save_model,burnout,gt, max_clusters, outlier_weight, outlier_params)
+        dp_model, iter_count , nmi_score_history, liklihood_history, cluster_count_history = dp_parallel(all_data, local_hyper_params,α_param,iters,init_clusters,seed,verbose, save_model,burnout,gt, max_clusters, outlier_weight, outlier_params)
         return Array(dp_model.group.labels), [x.cluster_params.cluster_params.distribution for x in dp_model.group.local_clusters], dp_model.group.weights,iter_count , nmi_score_history, liklihood_history, cluster_count_history,Array(dp_model.group.labels_subcluster)
 end
 
-"""
+
+#  ---------------------- THIS IS THE FIT FUNCTION THAT IS CALLED WHEN RUNNING THE DP CODE: -----------------------------------------------------------------
+fit(all_data::AbstractArray,local_hyper_params::distribution_hyper_params,α_param;
+        iters = 100, init_clusters::Number = 1,
+        seed = nothing, verbose = true,
+        save_model = false,burnout = 20, gt = nothing, max_clusters = Inf, outlier_weight = 0, outlier_params = nothing) =
+    fit(Float32.(all_data),local_hyper_params,Float32(α_param),iters = Int64(iters),
+        init_clusters=Int64(init_clusters), seed = seed, verbose = verbose,
+        save_model = save_model, burnout = burnout, gt = gt, max_clusters = max_clusters, outlier_weight = outlier_weight, outlier_params = outlier_params)
+#  ----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+#= """
     fit(all_data::AbstractArray{Float32,2},α_param::Float32;
         iters::Int64 = 100, init_clusters::Int64 = 1,seed = nothing, verbose = true, save_model = false,burnout = 20, gt = nothing, max_clusters = Inf, outlier_weight = 0, outlier_params = nothing)
 
@@ -263,7 +275,7 @@ function fit(all_data::AbstractArray{Float32,2},α_param::Float32;
     local_hyper_params = niw_hyperparams(1,zeros(Float32,data_dim),data_dim+3,cov_mat)
     dp_model,iter_count , nmi_score_history, liklihood_history, cluster_count_history = dp_parallel(all_data, local_hyper_params,α_param,iters,init_clusters, seed,verbose,save_model,burnout,gt, max_clusters,outlier_weight, outlier_params)
     return Array(dp_model.group.labels), [x.cluster_params.cluster_params.distribution for x in dp_model.group.local_clusters], dp_model.group.weights,iter_count , nmi_score_history, liklihood_history, cluster_count_history, Array(dp_model.group.labels_subcluster)
-end
+end 
 
 fit(all_data::AbstractArray, α_param;
         iters = 100, init_clusters = 1,
@@ -272,16 +284,6 @@ fit(all_data::AbstractArray, α_param;
     fit(Float32.(all_data),Float32(α_param),iters = Int64(iters),
         init_clusters=Int64(init_clusters), seed = seed, verbose = verbose,
         save_model = save_model, burnout = burnout, gt = gt, max_clusters = max_clusters, outlier_weight = outlier_weight, outlier_params = outlier_params)
-
-fit(all_data::AbstractArray,local_hyper_params::distribution_hyper_params,α_param;
-        iters = 100, init_clusters::Number = 1,
-        seed = nothing, verbose = true,
-        save_model = false,burnout = 20, gt = nothing, max_clusters = Inf, outlier_weight = 0, outlier_params = nothing) =
-    fit(Float32.(all_data),local_hyper_params,Float32(α_param),iters = Int64(iters),
-        init_clusters=Int64(init_clusters), seed = seed, verbose = verbose,
-        save_model = save_model, burnout = burnout, gt = gt, max_clusters = max_clusters, outlier_weight = outlier_weight, outlier_params = outlier_params)
-
-
 
 
 """
@@ -314,12 +316,12 @@ function dp_parallel(model_params::String; verbose = true, gt = nothing)
     global max_num_of_clusters = max_clusters
     init_first_clusters!(dp_model, initial_clusters)
     if use_verbose
-        println("Node Leaders:")
+        println("Node Leaders :")
         println(leader_dict)
     end
     @eval @everywhere global hard_clustering = $hard_clustering
     return run_model(dp_model, 1 ,model_params)
-end
+end =#
 
 function run_model(dp_model, first_iter, model_params="none", prev_time = 0)
     start_time= time()
@@ -365,7 +367,7 @@ function run_model(dp_model, first_iter, model_params="none", prev_time = 0)
         end
         if use_verbose
             push!(liklihood_history,calculate_posterior(dp_model))
-            println("Iteration: " * string(i) * " || Clusters count: " *
+            println("Iteration : " * string(i) * " || Clusters count: " *
                 string(cluster_count_history[end]) *
                 " || Log posterior: " * string(liklihood_history[end]) *
                 " || Vi score: " * string(v_score_history[end]) *

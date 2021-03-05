@@ -1,4 +1,4 @@
-function create_first_local_cluster(group::local_group)
+function create_first_local_cluster(group::local_group, related_gan_lbl::Int64)
     suff = create_sufficient_statistics(group.model_hyperparams.distribution_hyper_params, [])
     post = group.model_hyperparams.distribution_hyper_params
     dist = sample_distribution(post)
@@ -12,7 +12,8 @@ function create_first_local_cluster(group::local_group)
     cluster = local_cluster(splittable, group.model_hyperparams.total_dim,
         cp.suff_statistics.N,
         cpl.suff_statistics.N,
-        cpl.suff_statistics.N)
+        cpl.suff_statistics.N,
+        related_gan_lbl)
     @sync for i in (nworkers()== 0 ? procs() : workers())
         @spawnat i split_first_cluster_worker!(group)
     end
