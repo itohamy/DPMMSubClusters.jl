@@ -2,6 +2,8 @@ using NPZ
 using Distributions
 using LinearAlgebra
 
+#irit
+
 """
     generate_gaussian_data(N::Int64, D::Int64, K::Int64,MixtureVar::Number)
 
@@ -38,7 +40,7 @@ function generate_gaussian_data(N::Int64, D::Int64, K::Int64,MixtureVar::Number)
 		end
 		ind += tzn[i]
 	end
-	x, tz, tmean, tcov
+	return x, tz, tmean, tcov
 end
 
 
