@@ -382,6 +382,26 @@ function run_model(dp_model, first_iter, model_params="none", prev_time = 0)
         end
 
         prev_time = time()
+
+        # -------------- IRIT PRINTS ------------------
+        if mod(i, 50) == 0
+            println("--")
+            # Final label counts and sub-clusters:
+            vec = dp_model.group.local_clusters
+            labels_res = dp_model.group.labels
+            c = maximum(labels_res)
+            label_counts = zeros(Int(c))
+            for w=1:length(labels_res)
+                l = Int(labels_res[w])
+                label_counts[l] = label_counts[l] + 1
+            end
+            for w=1:length(label_counts)
+                println("dp results: label " * string(w) * ": " * string(label_counts[w]) * ", sub-cluster cnts:" * ", " * string(vec[w].cluster_params.cluster_params_l.suff_statistics.N) * ", " * string(vec[w].cluster_params.cluster_params_r.suff_statistics.N))
+            end
+            println("--")
+        end
+        # -------------- IRIT PRINTS - DONE ------------
+
         group_step(dp_model.group, no_more_splits, final, i==1)
         iter_time = time() - prev_time
         push!(iter_count,iter_time)

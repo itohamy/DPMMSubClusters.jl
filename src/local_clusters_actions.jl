@@ -244,7 +244,7 @@ end
 
 
 
-function split_cluster_local_worker!(labels, sub_labels, points,indices::Vector{Int64}, new_indices::Vector{Int64})
+function split_cluster_local_worker_old!(labels, sub_labels, points, indices::Vector{Int64}, new_indices::Vector{Int64})
     labels = localpart(labels)
     sub_labels = localpart(sub_labels)
     pts = localpart(points)
@@ -252,14 +252,33 @@ function split_cluster_local_worker!(labels, sub_labels, points,indices::Vector{
         cluster_sub_labels = @view sub_labels[labels .== index]
         cluster_labels = @view labels[labels .== index]
         cluster_points = @view pts[:,labels .== index]
-        cluster_labels[cluster_sub_labels .== 2] .= new_indices[i]
 
+        cluster_labels[cluster_sub_labels .== 2] .= new_indices[i]
         cluster_sub_labels .= rand(1:2,length(cluster_sub_labels))
 
     end
 end
 
-function split_cluster_local!(group::local_group, cluster::local_cluster, index::Int64, new_index::Int64)
+function split_cluster_local_worker!(labels, sub_labels, points, indices::Vector{Int64}, new_indices::Vector{Int64}, is_right_split_arr::Vector{Int64})
+    labels = localpart(labels)
+    sub_labels = localpart(sub_labels)
+    pts = localpart(points)
+    for (i,index) in enumerate(indices)
+        cluster_sub_labels = @view sub_labels[labels .== index]
+        cluster_labels = @view labels[labels .== index]
+        cluster_points = @view pts[:,labels .== index]
+
+        if is_right_split_arr[i] == 1
+            cluster_labels[cluster_sub_labels .== 2] .= new_indices[i]
+            cluster_sub_labels .= rand(1:2,length(cluster_sub_labels))
+        else
+            cluster_labels[cluster_sub_labels .== 1] .= new_indices[i]
+            cluster_sub_labels .= rand(1:2,length(cluster_sub_labels))
+        end
+    end
+end
+
+function split_cluster_local_old!(group::local_group, cluster::local_cluster, index::Int64, new_index::Int64)
 
     l_split = copy_local_cluster(cluster)
     l_split.cluster_params = create_splittable_from_params(cluster.cluster_params.cluster_params_r, group.model_hyperparams.α)
@@ -269,6 +288,29 @@ function split_cluster_local!(group::local_group, cluster::local_cluster, index:
     cluster.points_count = cluster.cluster_params.cluster_params.suff_statistics.N
 
     group.local_clusters[new_index] = l_split
+
+end
+
+function split_cluster_local!(group::local_group, cluster::local_cluster, index::Int64, new_index::Int64)
+
+    new_cluster = copy_local_cluster(cluster)
+
+    if cluster.cluster_params.cluster_params_l.suff_statistics.N > cluster.cluster_params.cluster_params_r.suff_statistics.N
+        new_cluster.cluster_params = create_splittable_from_params(cluster.cluster_params.cluster_params_r, group.model_hyperparams.α)
+        cluster.cluster_params = create_splittable_from_params(cluster.cluster_params.cluster_params_l, group.model_hyperparams.α)
+        is_r_split = 1
+    else
+        new_cluster.cluster_params = create_splittable_from_params(cluster.cluster_params.cluster_params_l, group.model_hyperparams.α)
+        cluster.cluster_params = create_splittable_from_params(cluster.cluster_params.cluster_params_r, group.model_hyperparams.α)
+        is_r_split = 0
+    end
+
+    new_cluster.points_count = new_cluster.cluster_params.cluster_params.suff_statistics.N
+    cluster.points_count = cluster.cluster_params.cluster_params.suff_statistics.N
+
+    group.local_clusters[new_index] = new_cluster
+
+    return is_r_split
 
 end
 
@@ -338,20 +380,21 @@ function check_and_split!(group::local_group, final::Bool)
     new_index = length(group.local_clusters) + 1
     indices = Vector{Int64}()
     new_indices = Vector{Int64}()
+    is_right_split_arr = Vector{Int64}()
     resize!(group.local_clusters,Int64(length(group.local_clusters) + sum(split_arr)))
     for i=1:length(split_arr)
         if split_arr[i] == 1
-
             push!(indices, i)
             push!(new_indices, new_index)
-            split_cluster_local!(group, group.local_clusters[i],i,new_index)
+            is_r_split = split_cluster_local!(group, group.local_clusters[i],i,new_index)
             new_index += 1
+            push!(is_right_split_arr, is_r_split)
         end
     end
     all_indices = vcat(indices,new_indices)
     if length(indices) > 0
         for i in (nworkers()== 0 ? procs() : workers())
-            @spawnat i split_cluster_local_worker!(group.labels,group.labels_subcluster,group.points,indices,new_indices)
+            @spawnat i split_cluster_local_worker!(group.labels, group.labels_subcluster, group.points, indices, new_indices, is_right_split_arr)
         end
     end
     return all_indices
@@ -535,8 +578,8 @@ function group_step(group::local_group, no_more_splits::Bool, final::Bool,first:
         indices = []
         indices = check_and_split!(group, final)
         update_suff_stats_posterior!(group, indices)
-        check_and_merge!(group, final)
+        #check_and_merge!(group, final)
     end
-    remove_empty_clusters!(group)
+    #remove_empty_clusters!(group)
     return
 end
