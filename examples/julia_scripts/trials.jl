@@ -17,7 +17,11 @@ function main()
     Random.seed!(12345)
 
     # Get gaussian data:
-    data, labels_gt, clusters_gt = DPMMSubClusters.generate_gaussian_data(10^4, 2, 6, 80.0)
+    N = 10^4  # number of points
+    D = 2   # data dimension
+    modes = 6   # number of modes
+    var_scale = 80.0
+    data, labels_gt, clusters_gt = DPMMSubClusters.generate_gaussian_data(N, D, modes, var_scale)
 
     # Hyper params:
     alpha = 1.
@@ -33,7 +37,7 @@ function main()
     hyper_prior = DPMMSubClusters.niw_hyperparams(k, m, nu, psi)
 
     #Run the model:
-    labels, clusters, weights = DPMMSubClusters.fit(data, hyper_prior, alpha, iters=iters, verbose=true)
+    labels, clusters, weights = DPMMSubClusters.fit(data, hyper_prior, alpha, labels_gt, iters=iters, init_clusters=5, verbose=true)
 
     println("\n------ Finished main ------\n")
 

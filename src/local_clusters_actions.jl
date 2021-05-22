@@ -130,7 +130,7 @@ end
 
 function create_suff_stats_dict_worker(group_pts, group_labels, group_sublabels, hyper_params, indices)
     suff_stats_dict = Dict()
-    if indices == nothing
+    if indices == nothing   # usually this holds
         indices = collect(1:length(clusters_vector))
     end
 

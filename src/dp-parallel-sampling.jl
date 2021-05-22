@@ -52,6 +52,35 @@ function init_model_from_data(all_data)
     return dp_parallel_sampling(model_hyperparams,group)
 end
 
+
+"""
+    init_model(all_data, init_labels)
+
+Initialize the model, from `all_data`, should be `Dimensions X Samples`, type `Float32`
+All prior data as been included previously, and is globaly accessed by the function.
+
+Returns an `dp_parallel_sampling` (e.g. the main data structure) with the configured parameters and data.
+"""
+function init_model_from_data(all_data, init_labels)
+    if random_seed != nothing
+        @eval @everywhere Random.seed!($random_seed)
+    end
+    if use_verbose
+        println("Loading and distributing data:")
+        @time data = distribute(all_data)
+    else
+        data = distribute(all_data)
+    end
+
+    total_dim = size(data,2)
+    model_hyperparams = model_hyper_params(hyper_params,α,total_dim)
+    labels = distribute(init_labels)   # distribute(rand(1:initial_clusters,(size(data,2))) .+ ((outlier_mod > 0) ? 1 : 0))   #       #
+    labels_subcluster = distribute(rand(1:2,(size(data,2))))
+    group = local_group(model_hyperparams, data, labels, labels_subcluster, local_cluster[], Float32[])
+    return dp_parallel_sampling(model_hyperparams,group)
+end
+
+
 """
     init_first_clusters!(dp_model::dp_parallel_sampling, initial_cluster_count::Int64))
 
@@ -60,7 +89,7 @@ Initialize the first clusters in the model, according to the number defined by i
 Mutates the model.
 """
 function init_first_clusters!(dp_model::dp_parallel_sampling, initial_cluster_count::Int64)
-    if outlier_mod > 0
+    if outlier_mod > 0   # usually this does not hold
         push!(dp_model.group.local_clusters, create_outlier_local_cluster(dp_model.group,outlier_hyper_params))
     end
     for i=1:initial_cluster_count
@@ -114,6 +143,7 @@ dp_model, iter_count , nmi_score_history, liklihood_history, cluster_count_histo
 function dp_parallel(all_data::AbstractArray{Float32,2},
         local_hyper_params::distribution_hyper_params,
         α_param::Float32,
+        init_labels::AbstractArray{Int64,1},
          iters::Int64 = 100,
          init_clusters::Int64 = 1,
          seed = nothing,
@@ -135,7 +165,7 @@ function dp_parallel(all_data::AbstractArray{Float32,2},
     global max_num_of_clusters = max_clusters
     global outlier_mod = outlier_weight
     global outlier_hyper_params = outlier_params
-    dp_model = init_model_from_data(all_data)
+    dp_model = init_model_from_data(all_data, init_labels)
     global leader_dict = get_node_leaders_dict()
     init_first_clusters!(dp_model, initial_clusters)
     if use_verbose
@@ -202,19 +232,20 @@ julia> unique(ret_values[1])
  4
 ```
 """
-function fit(all_data::AbstractArray{Float32,2},local_hyper_params::distribution_hyper_params,α_param::Float32;
-        iters::Int64 = 100, init_clusters::Int64 = 1,seed = nothing, verbose = true, save_model = false, burnout = 20, gt = nothing, max_clusters = Inf, outlier_weight = 0, outlier_params = nothing)
-        dp_model, iter_count , nmi_score_history, liklihood_history, cluster_count_history = dp_parallel(all_data, local_hyper_params,α_param,iters,init_clusters,seed,verbose, save_model,burnout,gt, max_clusters, outlier_weight, outlier_params)
+function fit(all_data::AbstractArray{Float32,2},local_hyper_params::distribution_hyper_params,α_param::Float32, init_labels::AbstractArray{Int64,1};
+        iters::Int64 = 100, init_clusters::Int64 = 1, seed = nothing, verbose = true, save_model = false, burnout = 20, gt = nothing, max_clusters = Inf, outlier_weight = 0, outlier_params = nothing)
+        dp_model, iter_count , nmi_score_history, liklihood_history, cluster_count_history = dp_parallel(all_data, local_hyper_params,α_param, init_labels, iters,init_clusters, seed,verbose, save_model,burnout,gt, max_clusters, outlier_weight, outlier_params)
+        println("irit's run")
         return Array(dp_model.group.labels), [x.cluster_params.cluster_params.distribution for x in dp_model.group.local_clusters], dp_model.group.weights,iter_count , nmi_score_history, liklihood_history, cluster_count_history,Array(dp_model.group.labels_subcluster)
 end
 
 
 #  ---------------------- THIS IS THE FIT FUNCTION THAT IS CALLED WHEN RUNNING THE DP CODE: -----------------------------------------------------------------
-fit(all_data::AbstractArray,local_hyper_params::distribution_hyper_params,α_param;
+fit(all_data::AbstractArray, local_hyper_params::distribution_hyper_params, α_param, init_labels::AbstractArray;
         iters = 100, init_clusters::Number = 1,
         seed = nothing, verbose = true,
         save_model = false,burnout = 20, gt = nothing, max_clusters = Inf, outlier_weight = 0, outlier_params = nothing) =
-    fit(Float32.(all_data),local_hyper_params,Float32(α_param),iters = Int64(iters),
+    fit(Float32.(all_data), local_hyper_params, Float32(α_param), Int64.(init_labels), iters = Int64(iters),
         init_clusters=Int64(init_clusters), seed = seed, verbose = verbose,
         save_model = save_model, burnout = burnout, gt = gt, max_clusters = max_clusters, outlier_weight = outlier_weight, outlier_params = outlier_params)
 #  ----------------------------------------------------------------------------------------------------------------------------------------------------------
