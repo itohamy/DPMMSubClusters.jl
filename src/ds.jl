@@ -46,7 +46,7 @@ mutable struct local_cluster
     points_count::Int64
     l_count::Int64
     r_count::Int64
-    related_gan_lbl::Int64
+    related_gan_lbl::Int64  # currently not in use
 end
 
 mutable struct local_group
@@ -56,6 +56,8 @@ mutable struct local_group
     labels_subcluster::AbstractArray{Int64,1}
     local_clusters::Vector{local_cluster}
     weights::Vector{Float32}
+    labels_mapping::Vector{Int64}  # shape: ~(K,). In each cell, the index is the new label, and the value is the original label (the one that should be returned).
+    max_orig_lbl::Int64  # saves the biggest label in "lables_mapping" during the process.
 end
 
 mutable struct pts_less_group

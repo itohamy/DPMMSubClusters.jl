@@ -61,7 +61,7 @@ All prior data as been included previously, and is globaly accessed by the funct
 
 Returns an `dp_parallel_sampling` (e.g. the main data structure) with the configured parameters and data.
 """
-function init_model_from_data(all_data, init_labels)
+function init_model_from_data(all_data, init_labels, unique_init_labels)
     if random_seed != nothing
         @eval @everywhere Random.seed!($random_seed)
     end
@@ -74,9 +74,17 @@ function init_model_from_data(all_data, init_labels)
 
     total_dim = size(data,2)
     model_hyperparams = model_hyper_params(hyper_params,α,total_dim)
-    labels = distribute(init_labels)   # distribute(rand(1:initial_clusters,(size(data,2))) .+ ((outlier_mod > 0) ? 1 : 0))   #       #
+
+    init_labels_unmapped = Vector{Int64}()
+    for i=1:length(init_labels)
+        ind_unmapped = findall(x->x==init_labels[i], unique_init_labels)[1]
+        push!(init_labels_unmapped, ind_unmapped)
+    end
+
+    labels = distribute(init_labels_unmapped)
+
     labels_subcluster = distribute(rand(1:2,(size(data,2))))
-    group = local_group(model_hyperparams, data, labels, labels_subcluster, local_cluster[], Float32[])
+    group = local_group(model_hyperparams, data, labels, labels_subcluster, local_cluster[], Float32[], Int64[], 0)
     return dp_parallel_sampling(model_hyperparams,group)
 end
 
@@ -88,15 +96,20 @@ Initialize the first clusters in the model, according to the number defined by i
 
 Mutates the model.
 """
-function init_first_clusters!(dp_model::dp_parallel_sampling, initial_cluster_count::Int64)
+function init_first_clusters!(dp_model::dp_parallel_sampling, initial_cluster_count::Int64, unique_init_labels::AbstractArray{Int64,1})
     #if outlier_mod > 0   # usually this does not hold
     #    push!(dp_model.group.local_clusters, create_outlier_local_cluster(dp_model.group,outlier_hyper_params))
     #end
+
     for i=1:initial_cluster_count
         push!(dp_model.group.local_clusters, create_first_local_cluster(dp_model.group, i))
+        push!(dp_model.group.labels_mapping, unique_init_labels[i])
     end
+
+    dp_model.group.max_orig_lbl = Int64(maximum(unique_init_labels))
+
     @sync update_suff_stats_posterior!(dp_model.group)
-    sample_clusters!(dp_model.group,false)
+    sample_clusters!(dp_model.group, false)
     broadcast_cluster_params([create_thin_cluster_params(x) for x in dp_model.group.local_clusters],[1.0])
 end
 
@@ -165,14 +178,15 @@ function dp_parallel(all_data::AbstractArray{Float32,2},
     global outlier_hyper_params = outlier_params
 
     init_labels = outlier_params  # this is a workaround to pass additional varibale to python wrapper
-    global initial_clusters = length(unique(init_labels))
+    unique_init_labels = sort(unique(init_labels))
+    global initial_clusters = length(unique_init_labels)
     println("===")
     println("initial_clusters: " * string(initial_clusters))
     println("===")
 
-    dp_model = init_model_from_data(all_data, init_labels)
+    dp_model = init_model_from_data(all_data, init_labels, unique_init_labels)
     global leader_dict = get_node_leaders_dict()
-    init_first_clusters!(dp_model, initial_clusters)
+    init_first_clusters!(dp_model, initial_clusters, unique_init_labels)
     if use_verbose
         println("Node Leaders:")
         println(leader_dict)
@@ -259,7 +273,12 @@ function fit(all_data::AbstractArray{Float32,2},local_hyper_params::distribution
     iters::Int64 = 100, init_clusters::Int64 = 1, seed = nothing, verbose = true, save_model = false, burnout = 20, gt = nothing, max_clusters = Inf, outlier_weight = 0, outlier_params::AbstractArray{Int64,1} = nothing)
     dp_model, iter_count , nmi_score_history, liklihood_history, cluster_count_history = dp_parallel(all_data, local_hyper_params,α_param, iters,init_clusters, seed,verbose, save_model,burnout,gt, max_clusters, outlier_weight, outlier_params)
     println("irit's run")
-    return Array(dp_model.group.labels), [x.cluster_params.cluster_params.distribution for x in dp_model.group.local_clusters], dp_model.group.weights,iter_count , nmi_score_history, liklihood_history, cluster_count_history,Array(dp_model.group.labels_subcluster)
+
+    mappings = dp_model.group.labels_mapping
+    original_labels = [mappings[x] for x in dp_model.group.labels]
+    # old: labels were returned as: Array(dp_model.group.labels)
+
+    return original_labels, [x.cluster_params.cluster_params.distribution for x in dp_model.group.local_clusters], dp_model.group.weights,iter_count , nmi_score_history, liklihood_history, cluster_count_history,Array(dp_model.group.labels_subcluster)
 end
 
 #  ---------------------- THIS IS THE FIT FUNCTION THAT IS CALLED WHEN RUNNING THE DP CODE: -----------------------------------------------------------------
@@ -418,15 +437,19 @@ function run_model(dp_model, first_iter, model_params="none", prev_time = 0)
                 label_counts[l] = label_counts[l] + 1
             end
             for w=1:length(label_counts)
-                println("dp results: label " * string(w) * ": " * string(label_counts[w]) * ", sub-cluster cnts:" * ", " * string(vec[w].cluster_params.cluster_params_l.suff_statistics.N) * ", " * string(vec[w].cluster_params.cluster_params_r.suff_statistics.N))
+                orig_lbl = dp_model.group.labels_mapping[w]
+                println("dp label: " * string(w) * "; final label: " * string(orig_lbl) * "; count: " * string(label_counts[w]))   # * ", sub-cluster cnts:" * ", " * string(vec[w].cluster_params.cluster_params_l.suff_statistics.N) * ", " * string(vec[w].cluster_params.cluster_params_r.suff_statistics.N)
             end
+            println("--")
+            print("Labels_mapping: ")
+            println(dp_model.group.labels_mapping)
             println("--")
         end
         # -------------- IRIT PRINTS - DONE ------------
 
         group_step(dp_model.group, no_more_splits, final, i==1)
         iter_time = time() - prev_time
-        push!(iter_count,iter_time)
+        push!(iter_count, iter_time)
 
         push!(cluster_count_history,length(dp_model.group.local_clusters))
 

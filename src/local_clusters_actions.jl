@@ -378,6 +378,7 @@ function check_and_split!(group::local_group, final::Bool)
         end
     end
     new_index = length(group.local_clusters) + 1
+    new_index_mapping = group.max_orig_lbl + 1
     indices = Vector{Int64}()
     new_indices = Vector{Int64}()
     is_right_split_arr = Vector{Int64}()
@@ -389,6 +390,10 @@ function check_and_split!(group::local_group, final::Bool)
             is_r_split = split_cluster_local!(group, group.local_clusters[i],i,new_index)
             new_index += 1
             push!(is_right_split_arr, is_r_split)
+
+            # update labels_mapping:
+            push!(group.labels_mapping, new_index_mapping)
+            new_index_mapping += 1
         end
     end
     all_indices = vcat(indices,new_indices)
@@ -397,6 +402,9 @@ function check_and_split!(group::local_group, final::Bool)
             @spawnat i split_cluster_local_worker!(group.labels, group.labels_subcluster, group.points, indices, new_indices, is_right_split_arr)
         end
     end
+
+    group.max_orig_lbl = Int64(maximum(group.labels_mapping))
+
     return all_indices
 end
 
@@ -448,7 +456,11 @@ function sample_clusters!(group::local_group, first::Bool)
         cluster.points_count = cluster.cluster_params.cluster_params.suff_statistics.N
         push!(points_count, cluster.points_count)
     end
+
     push!(points_count, group.model_hyperparams.α)
+
+    #println(points_count)
+
     group.weights = rand(Dirichlet(Float64.(points_count)))[1:end-1] .* (1 - outlier_mod)
     if outlier_mod > 0
         group.weights = vcat([outlier_mod],group.weights)
@@ -473,20 +485,24 @@ function remove_empty_clusters_worker!(labels, pts_count)
     end
 end
 
+
 function remove_empty_clusters!(group::local_group)
     new_vec = Vector{local_cluster}()
-    removed = 0
+    new_mapping = Vector{Int64}()
     pts_count = Vector{Int64}()
-    for (index,cluster) in enumerate(group.local_clusters)
+    for (index, cluster) in enumerate(group.local_clusters)
         push!(pts_count, cluster.points_count)
         if cluster.points_count > 0 || (outlier_mod > 0 && index == 1) || (outlier_mod > 0 && index == 2 && length(group.local_clusters) == 2)
-            push!(new_vec,cluster)
+            push!(new_vec, cluster)
+            push!(new_mapping, group.labels_mapping[index])
         end
     end
     @sync for i in (nworkers()== 0 ? procs() : workers())
         @spawnat i remove_empty_clusters_worker!(group.labels, pts_count)
     end
+
     group.local_clusters = new_vec
+    group.labels_mapping = new_mapping
 end
 
 
@@ -580,6 +596,6 @@ function group_step(group::local_group, no_more_splits::Bool, final::Bool,first:
         update_suff_stats_posterior!(group, indices)
         #check_and_merge!(group, final)
     end
-    #remove_empty_clusters!(group)
+    remove_empty_clusters!(group)
     return
 end
