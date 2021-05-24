@@ -89,9 +89,9 @@ Initialize the first clusters in the model, according to the number defined by i
 Mutates the model.
 """
 function init_first_clusters!(dp_model::dp_parallel_sampling, initial_cluster_count::Int64)
-    if outlier_mod > 0   # usually this does not hold
-        push!(dp_model.group.local_clusters, create_outlier_local_cluster(dp_model.group,outlier_hyper_params))
-    end
+    #if outlier_mod > 0   # usually this does not hold
+    #    push!(dp_model.group.local_clusters, create_outlier_local_cluster(dp_model.group,outlier_hyper_params))
+    #end
     for i=1:initial_cluster_count
         push!(dp_model.group.local_clusters, create_first_local_cluster(dp_model.group, i))
     end
@@ -143,7 +143,6 @@ dp_model, iter_count , nmi_score_history, liklihood_history, cluster_count_histo
 function dp_parallel(all_data::AbstractArray{Float32,2},
         local_hyper_params::distribution_hyper_params,
         α_param::Float32,
-        init_labels::AbstractArray{Int64,1},
          iters::Int64 = 100,
          init_clusters::Int64 = 1,
          seed = nothing,
@@ -157,7 +156,6 @@ function dp_parallel(all_data::AbstractArray{Float32,2},
     global iterations = iters
     global random_seed = seed
     global hyper_params = local_hyper_params
-    global initial_clusters = init_clusters
     global α = α_param
     global use_verbose = verbose
     global should_save_model = save_model
@@ -165,6 +163,13 @@ function dp_parallel(all_data::AbstractArray{Float32,2},
     global max_num_of_clusters = max_clusters
     global outlier_mod = outlier_weight
     global outlier_hyper_params = outlier_params
+
+    init_labels = outlier_params  # this is a workaround to pass additional varibale to python wrapper
+    global initial_clusters = length(unique(init_labels))
+    println("===")
+    println("initial_clusters: " * initial_clusters)
+    println("===")
+
     dp_model = init_model_from_data(all_data, init_labels)
     global leader_dict = get_node_leaders_dict()
     init_first_clusters!(dp_model, initial_clusters)
@@ -232,22 +237,39 @@ julia> unique(ret_values[1])
  4
 ```
 """
-function fit(all_data::AbstractArray{Float32,2},local_hyper_params::distribution_hyper_params,α_param::Float32, init_labels::AbstractArray{Int64,1};
-        iters::Int64 = 100, init_clusters::Int64 = 1, seed = nothing, verbose = true, save_model = false, burnout = 20, gt = nothing, max_clusters = Inf, outlier_weight = 0, outlier_params = nothing)
-        dp_model, iter_count , nmi_score_history, liklihood_history, cluster_count_history = dp_parallel(all_data, local_hyper_params,α_param, init_labels, iters,init_clusters, seed,verbose, save_model,burnout,gt, max_clusters, outlier_weight, outlier_params)
-        println("irit's run")
-        return Array(dp_model.group.labels), [x.cluster_params.cluster_params.distribution for x in dp_model.group.local_clusters], dp_model.group.weights,iter_count , nmi_score_history, liklihood_history, cluster_count_history,Array(dp_model.group.labels_subcluster)
-end
-
+#function fit(all_data::AbstractArray{Float32,2},local_hyper_params::distribution_hyper_params,α_param::Float32, init_labels::AbstractArray{Int64,1};
+#        iters::Int64 = 100, init_clusters::Int64 = 1, seed = nothing, verbose = true, save_model = false, burnout = 20, gt = nothing, max_clusters = Inf, outlier_weight = 0, outlier_params = nothing)
+#        dp_model, iter_count , nmi_score_history, liklihood_history, cluster_count_history = dp_parallel(all_data, local_hyper_params,α_param, init_labels, iters,init_clusters, seed,verbose, save_model,burnout,gt, max_clusters, outlier_weight, outlier_params)
+#        println("irit's run")
+#        return Array(dp_model.group.labels), [x.cluster_params.cluster_params.distribution for x in dp_model.group.local_clusters], dp_model.group.weights,iter_count , nmi_score_history, liklihood_history, cluster_count_history,Array(dp_model.group.labels_subcluster)
+#end
 
 #  ---------------------- THIS IS THE FIT FUNCTION THAT IS CALLED WHEN RUNNING THE DP CODE: -----------------------------------------------------------------
-fit(all_data::AbstractArray, local_hyper_params::distribution_hyper_params, α_param, init_labels::AbstractArray;
+#fit(all_data::AbstractArray, local_hyper_params::distribution_hyper_params, α_param, init_labels::AbstractArray;
+#        iters = 100, init_clusters::Number = 1,
+#        seed = nothing, verbose = true,
+#        save_model = false,burnout = 20, gt = nothing, max_clusters = Inf, outlier_weight = 0, outlier_params = nothing) =
+#    fit(Float32.(all_data), local_hyper_params, Float32(α_param), Int64.(init_labels), iters = Int64(iters),
+#        init_clusters=Int64(init_clusters), seed = seed, verbose = verbose,
+#        save_model = save_model, burnout = burnout, gt = gt, max_clusters = max_clusters, outlier_weight = outlier_weight, outlier_params = outlier_params)
+#  ----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+function fit(all_data::AbstractArray{Float32,2},local_hyper_params::distribution_hyper_params,α_param::Float32;
+    iters::Int64 = 100, init_clusters::Int64 = 1, seed = nothing, verbose = true, save_model = false, burnout = 20, gt = nothing, max_clusters = Inf, outlier_weight = 0, outlier_params::AbstractArray{Int64,1} = nothing)
+    dp_model, iter_count , nmi_score_history, liklihood_history, cluster_count_history = dp_parallel(all_data, local_hyper_params,α_param, iters,init_clusters, seed,verbose, save_model,burnout,gt, max_clusters, outlier_weight, outlier_params)
+    println("irit's run")
+    return Array(dp_model.group.labels), [x.cluster_params.cluster_params.distribution for x in dp_model.group.local_clusters], dp_model.group.weights,iter_count , nmi_score_history, liklihood_history, cluster_count_history,Array(dp_model.group.labels_subcluster)
+end
+
+#  ---------------------- THIS IS THE FIT FUNCTION THAT IS CALLED WHEN RUNNING THE DP CODE: -----------------------------------------------------------------
+fit(all_data::AbstractArray,local_hyper_params::distribution_hyper_params,α_param;
         iters = 100, init_clusters::Number = 1,
         seed = nothing, verbose = true,
-        save_model = false,burnout = 20, gt = nothing, max_clusters = Inf, outlier_weight = 0, outlier_params = nothing) =
-    fit(Float32.(all_data), local_hyper_params, Float32(α_param), Int64.(init_labels), iters = Int64(iters),
+        save_model = false,burnout = 20, gt = nothing, max_clusters = Inf, outlier_weight = 0, outlier_params::AbstractArray = nothing) =
+    fit(Float32.(all_data),local_hyper_params,Float32(α_param),iters = Int64(iters),
         init_clusters=Int64(init_clusters), seed = seed, verbose = verbose,
-        save_model = save_model, burnout = burnout, gt = gt, max_clusters = max_clusters, outlier_weight = outlier_weight, outlier_params = outlier_params)
+        save_model = save_model, burnout = burnout, gt = gt, max_clusters = max_clusters, outlier_weight = outlier_weight, outlier_params = Int64.(outlier_params))
 #  ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
 

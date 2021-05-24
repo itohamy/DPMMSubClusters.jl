@@ -3,7 +3,6 @@ using Distributed
 using Revise
 
 #addprocs(4)
-@everywhere using VersatileHDPMixtureModels
 @everywhere using DPMMSubClusters
 @everywhere using Random
 @everywhere using Statistics
@@ -24,10 +23,10 @@ function main()
     data, labels_gt, clusters_gt = DPMMSubClusters.generate_gaussian_data(N, D, modes, var_scale)
 
     # Changing the lables to be incorrect (to see how the splits work)
-    #labels_gt[labels_gt.==3] .= 2
-    #labels_gt[labels_gt.==4] .= 3
-    #labels_gt[labels_gt.==5] .= 4
-    #labels_gt[labels_gt.==6] .= 5
+    labels_gt[labels_gt.==3] .= 2
+    labels_gt[labels_gt.==4] .= 3
+    labels_gt[labels_gt.==5] .= 4
+    labels_gt[labels_gt.==6] .= 5
 
     # Shuffle data and gt_labels:
     data, labels_gt = shuffle_data_points_and_labels(data, labels_gt)
@@ -57,11 +56,13 @@ function main()
     end
 
     #Run the model:
-    labels, clusters, weights = DPMMSubClusters.fit(data, hyper_prior, alpha, labels_gt, iters=iters, init_clusters=init_clusters, verbose=true)
+    # "outlier_params=labels_gt": this is a workaround to pass additional varibale to python wrapper
+    labels, clusters, weights = DPMMSubClusters.fit(data, hyper_prior, alpha, iters=iters, verbose=true, outlier_params=labels_gt)
 
     println("\n------ Finished main ------\n")
 
 end
+
 
 
 
