@@ -1,6 +1,7 @@
 using Images
 using Distributed
 using Revise
+using LinearAlgebra
 
 #addprocs(4)
 @everywhere using DPMMSubClusters
@@ -15,35 +16,45 @@ function main()
     
     Random.seed!(12345)
 
-    # Get gaussian data:
-    N = 10^4  # number of points
-    D = 2   # data dimension
-    modes = 6   # number of modes
-    var_scale = 80.0
+    # --- Toy data #1:
+    N = 20000 #Number of points
+    D = 2 # Dimension
+    modes = 20 # Number of Clusters
+    var_scale = 100.0 # The variance of the MV-Normal distribution where the clusters means are sampled from.
+
+    # --- Toy data #2:
+    # N = 10^4  # number of points
+    # D = 2   # data dimension
+    # modes = 6   # number of modes
+    # var_scale = 80.0
+    
+    # --- Extract the data:
     data, labels_gt, clusters_gt = DPMMSubClusters.generate_gaussian_data(N, D, modes, var_scale)
 
-    # Changing the lables to be incorrect (to see how the splits work)
-    labels_gt[labels_gt.==3] .= 2
-    labels_gt[labels_gt.==4] .= 3
-    labels_gt[labels_gt.==5] .= 4
-    labels_gt[labels_gt.==6] .= 5
+    # --- Changing the lables to be incorrect (to see how the splits work)
+    #labels_gt[labels_gt.==3] .= 2
+    #labels_gt[labels_gt.==4] .= 3
+    #labels_gt[labels_gt.==5] .= 4
+    #labels_gt[labels_gt.==6] .= 5
 
-    # Shuffle data and gt_labels:
+    # --- Shuffle data and gt_labels:
     data, labels_gt = shuffle_data_points_and_labels(data, labels_gt)
-    
-    # Hyper params:
-    alpha = 1.
-    iters = 200
     init_clusters = length(unique(labels_gt))
+    
+    # --- hyper params #1:
+    hyper_prior = DPMMSubClusters.niw_hyperparams(1, zeros(Float32,(D)), 5, Matrix{Float64}(I, D, D)*0.5)
+    alpha = 10.
+    iters = 500
 
-    # Define prior:
-    D, N = size(data)
-    m = zeros(Float32,(D))
-    k = init_clusters  #1.0
-    nu = 130.  # should be > D
-    psi = cov(data')*0.01  # shape (D,D)
-
-    hyper_prior = DPMMSubClusters.niw_hyperparams(k, m, nu, psi)
+    # --- Hyper params #2:
+    # D, N = size(data)
+    # m = zeros(Float32,(D))
+    # k = init_clusters  #1.0
+    # nu = 130.  # should be > D
+    # psi = cov(data')*0.01  # shape (D,D)
+    # hyper_prior = DPMMSubClusters.niw_hyperparams(k, m, nu, psi)
+    # alpha = 1.
+    # iters = 200
 
     # Original label counts:
     label_counts = zeros(Int(init_clusters))

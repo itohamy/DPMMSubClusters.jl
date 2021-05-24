@@ -167,7 +167,7 @@ function dp_parallel(all_data::AbstractArray{Float32,2},
     init_labels = outlier_params  # this is a workaround to pass additional varibale to python wrapper
     global initial_clusters = length(unique(init_labels))
     println("===")
-    println("initial_clusters: " * initial_clusters)
+    println("initial_clusters: " * string(initial_clusters))
     println("===")
 
     dp_model = init_model_from_data(all_data, init_labels)
