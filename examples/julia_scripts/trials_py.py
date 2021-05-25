@@ -27,7 +27,7 @@ data, labels = DPMMPython.generate_gaussian_data(N, D, modes, var_scale)
 #labels[labels==3] = 2
 #labels[labels==4] = 3
 #labels[labels==5] = 4
-#labels[labels==6] = 5
+labels[labels==6] = 130
 
 # --- hyper params #1:
 hyper_prior = niw(1,np.zeros(D),5,np.eye(D)*0.5)
@@ -44,14 +44,14 @@ iters = 500
 #alpha = 1.
 #iters = 200
 
-# --- Print original label counts:
-label_counts = np.zeros(init_clusters)
-for i in range(len(labels)):
-    l = int(labels[i]-1)
-    label_counts[l] = label_counts[l] + 1
+# --- Print original label counts: (need to fix, see how it's done in trials.jl)
+# label_counts = np.zeros(init_clusters)
+# for i in range(len(labels)):
+#     l = int(labels[i]-1)
+#     label_counts[l] = label_counts[l] + 1
 
-for i in range(len(label_counts)):
-    print("label ", str(i+1), ": ", str(label_counts[i]))
+# for i in range(len(label_counts)):
+#     print("label ", str(i+1), ": ", str(label_counts[i]))
 
 
 # --- Run DP:
