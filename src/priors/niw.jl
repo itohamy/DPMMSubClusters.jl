@@ -33,6 +33,10 @@ end
 
 function sample_distribution(hyperparams::niw_hyperparams)
     println("typeof(hyperparams.ψ): ", typeof(hyperparams.ψ))
+    println("typeof(hyperparams.ν): ", typeof(hyperparams.ν))
+    println("typeof(hyperparams.κ): ", typeof(hyperparams.κ))
+    println("typeof(hyperparams.m): ", typeof(hyperparams.m))
+    
     Σ = rand(Distributions.InverseWishart(hyperparams.ν, hyperparams.ν* hyperparams.ψ))
     μ = rand(Distributions.MvNormal(hyperparams.m, Σ/hyperparams.κ))
     invΣ = inv(Σ)
