@@ -21,33 +21,14 @@ function calc_posterior(prior:: niw_hyperparams, suff_statistics::niw_sufficient
     if suff_statistics.N == 0
         return prior
     end
-    println("typeof(prior.ν): ", typeof(prior.ν))
-    println("typeof(prior.m): ", typeof(prior.m))
-    println("typeof(prior.κ): ", typeof(prior.κ))
-    println("typeof(prior.ψ): ", typeof(prior.ψ))
-    println("typeof(suff_statistics.points_sum): ", typeof(suff_statistics.points_sum))
-    println("typeof(suff_statistics.S): ", typeof(suff_statistics.S))
-    println("typeof(suff_statistics.N): ", typeof(suff_statistics.N))
 
     κ = prior.κ + suff_statistics.N
     ν = prior.ν + suff_statistics.N
     m = (prior.m.*prior.κ + suff_statistics.points_sum) / κ
     ψ = (prior.ν * prior.ψ + prior.κ*prior.m*prior.m' -κ*m*m'+ suff_statistics.S) / ν
-    println("typeof(ν): ", typeof(ν))
-    println("typeof(m): ", typeof(m))
-    println("typeof(κ): ", typeof(κ))
-    println("typeof(ψ): ", typeof(ψ))
 
     ψ = Matrix(Symmetric(ψ))
-    println("typeof(ν): ", typeof(ν))
-    println("typeof(m): ", typeof(m))
-    println("typeof(κ): ", typeof(κ))
-    println("typeof(ψ): ", typeof(ψ))
     ψ = (ψ+ψ')/2
-    println("typeof(ν): ", typeof(ν))
-    println("typeof(m): ", typeof(m))
-    println("typeof(κ): ", typeof(κ))
-    println("typeof(ψ): ", typeof(ψ))
     return niw_hyperparams(κ,m,ν,ψ)
 end
 
