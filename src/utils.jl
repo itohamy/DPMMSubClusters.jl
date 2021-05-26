@@ -64,7 +64,7 @@ function get_node_leaders_dict()
 end
 
 function log_multivariate_gamma(x::Number, D::Number)
-    res::Float32 = D*(D-1)/4*log(pi)
+    res::Float64 = D*(D-1)/4*log(pi)
     for d = 1:D
         res += logabsgamma(x+(1-d)/2)[1]
     end

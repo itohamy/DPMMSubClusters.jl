@@ -8,8 +8,8 @@ struct multinomial_hyper <: distribution_hyper_params
 end
 
 mutable struct multinomial_sufficient_statistics <: sufficient_statistics
-    N::Float32
-    points_sum::AbstractArray{Float32,1}
+    N::Float64
+    points_sum::AbstractArray{Float64,1}
 end
 
 
