@@ -39,9 +39,9 @@ function sample_distribution(hyperparams::niw_hyperparams)
     return mv_gaussian(μ,Σ,invΣ,logdet(Σ),chol.U)
 end
 
-function create_sufficient_statistics(hyper::niw_hyperparams,posterior::niw_hyperparams,points::AbstractArray{Float32,2}, pts_to_group = 0)
+function create_sufficient_statistics(hyper::niw_hyperparams,posterior::niw_hyperparams,points::AbstractArray{Float64,2}, pts_to_group = 0)
     if size(points,2) == 0
-        return niw_sufficient_statistics(size(points,2),zeros(Float32,length(hyper.m)),zeros(Float32,length(hyper.m),length(hyper.m)))
+        return niw_sufficient_statistics(size(points,2),zeros(Float64,length(hyper.m)),zeros(Float64,length(hyper.m),length(hyper.m)))
     end
     pts = Array{Float64}(points)
     points_sum = sum(pts, dims = 2)[:]
