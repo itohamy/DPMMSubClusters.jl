@@ -21,7 +21,7 @@ var_scale = 100.0 # The variance of the MV-Normal distribution where the cluster
 #var_scale = 80.0
 
 # --- Extract the data:
-data, labels = DPMMPython.generate_gaussian_data(N, D, modes, var_scale) 
+data, labels = DPMMPython.generate_gaussian_data(N, D, modes, var_scale)
 
 # Changing the lables to be incorrect (to see how the splits work)
 #labels[labels==3] = 2
