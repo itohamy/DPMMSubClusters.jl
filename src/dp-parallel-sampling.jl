@@ -177,8 +177,6 @@ function dp_parallel(all_data::AbstractArray{Float32,2},
     global outlier_mod = outlier_weight
     global outlier_hyper_params = outlier_params
 
-    println("typeof(hyper_params.ψ): ", typeof(hyper_params.ψ))
-
     init_labels = outlier_params  # this is a workaround to pass additional varibale to python wrapper
     unique_init_labels = sort(unique(init_labels))
     global initial_clusters = length(unique_init_labels)
@@ -187,7 +185,6 @@ function dp_parallel(all_data::AbstractArray{Float32,2},
     println("===")
 
     dp_model = init_model_from_data(all_data, init_labels, unique_init_labels)
-    println("typeof(hyper_params.ψ): ", typeof(hyper_params.ψ))
     global leader_dict = get_node_leaders_dict()
     init_first_clusters!(dp_model, initial_clusters, unique_init_labels)
     if use_verbose
@@ -277,7 +274,7 @@ function fit(all_data::AbstractArray{Float32,2},local_hyper_params::distribution
     
     psi = local_hyper_params.ψ
     println("Is psi positive definite?: ", minimum(eigvals(psi))>0)
-    println("typeof(psi): ", typeof(psi))
+    #println("typeof(psi): ", typeof(psi))
     
     dp_model, iter_count , nmi_score_history, liklihood_history, cluster_count_history = dp_parallel(all_data, local_hyper_params,α_param, iters,init_clusters, seed,verbose, save_model,burnout,gt, max_clusters, outlier_weight, outlier_params)
     println("irit's run")
