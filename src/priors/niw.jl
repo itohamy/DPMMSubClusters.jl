@@ -11,7 +11,7 @@ struct niw_hyperparams <: distribution_hyper_params
 end
 
 mutable struct niw_sufficient_statistics <: sufficient_statistics
-    N::Float32
+    N::Float64
     points_sum::AbstractArray{Float64,1}
     S::AbstractArray{Float64,2}
 end
@@ -41,7 +41,7 @@ end
 
 function create_sufficient_statistics(hyper::niw_hyperparams,posterior::niw_hyperparams,points::AbstractArray{Float32,2}, pts_to_group = 0)
     if size(points,2) == 0
-        return niw_sufficient_statistics(size(points,2),zeros(Float32,length(hyper.m)),zeros(Float32,length(hyper.m),length(hyper.m)))
+        return niw_sufficient_statistics(size(points,2),zeros(Float64,length(hyper.m)),zeros(Float64,length(hyper.m),length(hyper.m)))
     end
     pts = Array{Float64}(points)
     points_sum = sum(pts, dims = 2)[:]
