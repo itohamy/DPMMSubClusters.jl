@@ -32,7 +32,7 @@ end
 
 
 function sample_distribution(hyperparams::niw_hyperparams)
-    Σ = rand(Distributions.InverseWishart(hyperparams.ν, hyperparams.ν* hyperparams.ψ))
+    Σ = rand(Distributions.InverseWishart(hyperparams.ν, hyperparams.ν* Float64.(hyperparams.ψ)))
     μ = rand(Distributions.MvNormal(hyperparams.m, Σ/hyperparams.κ))
     invΣ = inv(Σ)
     chol = cholesky(Hermitian(invΣ))
