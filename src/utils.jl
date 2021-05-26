@@ -32,7 +32,7 @@ end
 
 
 function create_sufficient_statistics(dist::distribution_hyper_params, pts::Array{Any,1})
-    return create_sufficient_statistics(dist,dist, Array{Float32}(undef, 0, 0))
+    return create_sufficient_statistics(dist,dist, Array{Float64}(undef, 0, 0))
 end
 
 
