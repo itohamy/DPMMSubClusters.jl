@@ -179,7 +179,7 @@ function dp_parallel(all_data::AbstractArray{Float32,2},
 
     init_labels = outlier_params  # this is a workaround to pass additional varibale to python wrapper
     unique_init_labels = sort(unique(init_labels))
-    global initial_clusters = length(unique_init_labels)
+        global initial_clusters = length(unique_init_labels)
     println("===")
     println("initial_clusters: " * string(initial_clusters))
     println("===")
@@ -283,7 +283,7 @@ function fit(all_data::AbstractArray{Float32,2},local_hyper_params::distribution
     original_labels = [mappings[x] for x in dp_model.group.labels]
     # old: labels were returned as: Array(dp_model.group.labels)
 
-    return original_labels, [x.cluster_params.cluster_params.distribution for x in dp_model.group.local_clusters], dp_model.group.weights,iter_count , nmi_score_history, liklihood_history, cluster_count_history,Array(dp_model.group.labels_subcluster)
+    return original_labels, [x.cluster_params.cluster_params.distribution for x in dp_model.group.local_clusters], dp_model.group.weights, iter_count , nmi_score_history, liklihood_history, cluster_count_history, mappings, Array(dp_model.group.labels_subcluster)
 end
 
 #  ---------------------- THIS IS THE FIT FUNCTION THAT IS CALLED WHEN RUNNING THE DP CODE: -----------------------------------------------------------------
