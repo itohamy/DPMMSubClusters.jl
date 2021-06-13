@@ -283,6 +283,9 @@ function fit(all_data::AbstractArray{Float32,2},local_hyper_params::distribution
     original_labels = [mappings[x] for x in dp_model.group.labels]
     # old: labels were returned as: Array(dp_model.group.labels)
 
+    print("Labels_mapping: ")
+    println(dp_model.group.labels_mapping)
+
     return original_labels, [x.cluster_params.cluster_params.distribution for x in dp_model.group.local_clusters], dp_model.group.weights, iter_count , nmi_score_history, liklihood_history, cluster_count_history, mappings, Array(dp_model.group.labels_subcluster)
 end
 
@@ -430,26 +433,26 @@ function run_model(dp_model, first_iter, model_params="none", prev_time = 0)
         prev_time = time()
 
         # -------------- IRIT PRINTS ------------------
-        if mod(i, 50) == 0
-            println("--")
-            # Final label counts and sub-clusters:
-            vec = dp_model.group.local_clusters
-            labels_res = dp_model.group.labels
-            c = maximum(labels_res)
-            label_counts = zeros(Int(c))
-            for w=1:length(labels_res)
-                l = Int(labels_res[w])
-                label_counts[l] = label_counts[l] + 1
-            end
-            #for w=1:length(label_counts)
-            #    orig_lbl = dp_model.group.labels_mapping[w]
-            #    println("dp label: " * string(w) * "; final label: " * string(orig_lbl) * "; count: " * string(label_counts[w]))   # * ", sub-cluster cnts:" * ", " * string(vec[w].cluster_params.cluster_params_l.suff_statistics.N) * ", " * string(vec[w].cluster_params.cluster_params_r.suff_statistics.N)
-            #end
-            #println("--")
-            print("Labels_mapping: ")
-            println(dp_model.group.labels_mapping)
-            #println("--")
-        end
+        # if mod(i, 50) == 0
+        #     println("--")
+        #     # Final label counts and sub-clusters:
+        #     vec = dp_model.group.local_clusters
+        #     labels_res = dp_model.group.labels
+        #     c = maximum(labels_res)
+        #     label_counts = zeros(Int(c))
+        #     for w=1:length(labels_res)
+        #         l = Int(labels_res[w])
+        #         label_counts[l] = label_counts[l] + 1
+        #     end
+        #     #for w=1:length(label_counts)
+        #     #    orig_lbl = dp_model.group.labels_mapping[w]
+        #     #    println("dp label: " * string(w) * "; final label: " * string(orig_lbl) * "; count: " * string(label_counts[w]))   # * ", sub-cluster cnts:" * ", " * string(vec[w].cluster_params.cluster_params_l.suff_statistics.N) * ", " * string(vec[w].cluster_params.cluster_params_r.suff_statistics.N)
+        #     #end
+        #     #println("--")
+        #     #print("Labels_mapping: ")
+        #     #println(dp_model.group.labels_mapping)
+        #     #println("--")
+        # end
         # -------------- IRIT PRINTS - DONE ------------
 
         group_step(dp_model.group, no_more_splits, final, i==1)
