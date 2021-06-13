@@ -441,14 +441,14 @@ function run_model(dp_model, first_iter, model_params="none", prev_time = 0)
                 l = Int(labels_res[w])
                 label_counts[l] = label_counts[l] + 1
             end
-            for w=1:length(label_counts)
-                orig_lbl = dp_model.group.labels_mapping[w]
-                println("dp label: " * string(w) * "; final label: " * string(orig_lbl) * "; count: " * string(label_counts[w]))   # * ", sub-cluster cnts:" * ", " * string(vec[w].cluster_params.cluster_params_l.suff_statistics.N) * ", " * string(vec[w].cluster_params.cluster_params_r.suff_statistics.N)
-            end
-            println("--")
+            #for w=1:length(label_counts)
+            #    orig_lbl = dp_model.group.labels_mapping[w]
+            #    println("dp label: " * string(w) * "; final label: " * string(orig_lbl) * "; count: " * string(label_counts[w]))   # * ", sub-cluster cnts:" * ", " * string(vec[w].cluster_params.cluster_params_l.suff_statistics.N) * ", " * string(vec[w].cluster_params.cluster_params_r.suff_statistics.N)
+            #end
+            #println("--")
             print("Labels_mapping: ")
             println(dp_model.group.labels_mapping)
-            println("--")
+            #println("--")
         end
         # -------------- IRIT PRINTS - DONE ------------
 
