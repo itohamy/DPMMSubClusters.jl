@@ -34,7 +34,7 @@ function generate_gaussian_data(N::Int64, D::Int64, K::Int64,MixtureVar::Number)
 		tz[indices] .= i
 		tmean[:,i] .= rand(MvNormal(zeros(Float32,D), MixtureVar*Matrix{Float32}(I, D, D)))
 		tcov[:,:,i] .= rand(InverseWishart(D+2, Matrix{Float32}(I, D, D)))
-		println(minimum(eigvals(tcov[:,:,i]))>0)
+		#println(minimum(eigvals(tcov[:,:,i]))>0)
 		d = MvNormal(tmean[:,i], tcov[:,:,i])
 		for j=indices
 			x[:,j] = rand(d)
