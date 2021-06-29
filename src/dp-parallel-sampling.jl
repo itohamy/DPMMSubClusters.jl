@@ -496,7 +496,7 @@ function run_model(dp_model, first_iter, model_params="none", prev_time = 0)
     end
 
     # Update the weights after all changes:
-    sample_clusters!(group, false)
+    sample_clusters!(dp_model.group, false)
 
     return dp_model, iter_count , nmi_score_history, liklihood_history, cluster_count_history
 end
